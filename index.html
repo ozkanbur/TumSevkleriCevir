@@ -586,73 +586,52 @@ cvt.addEventListener('click', async function() {
   setLoading(true);
 
   let tumSatirlar = []; // Tüm dosyaların satırlarını birleştireceğimiz ana liste
-let genelToplamHacim = 0; // Birleştirilmiş toplam hacim
-let hataliDosyalar = [];
-let basariliSayisi = 0;
+  let genelToplamHacim = 0; // Birleştirilmiş toplam hacim
+  let hataliDosyalar = [];
+  let basariliSayisi = 0;
 
-// 284 dosya için döngüyü başlatıyoruz
-for (let i = 0; i < files.length; i++) {
+  // 'Loop' (Döngü - bir işlemi koşul sağlanana kadar tekrarlayan yapı) kurarak dosyaları tek tek geziyoruz.
+  for (let i = 0; i < files.length; i++) {
     const file = files[i];
+    
     try {
-        log(file.name + ' okunuyor…', 'di2');
+      log(file.name + ' okunuyor…', 'di2');
+      // 'arrayBuffer' (Dizi Tamponu - dosyanın bellekteki ham veri hali)
+      var ab = await file.arrayBuffer(); 
+      var result = await parsePDF(ab);
+      
+      if (result.rows && result.rows.length > 0) {
+        // 'Spread Operator' (Yayma Operatörü - "..." simgesi ile listedeki elemanları dışarı aktarma)
+        tumSatirlar.push(...result.rows);
         
-        var ab = await file.arrayBuffer();
+        // Bu dosyadaki emvallerin (ürünlerin) hacmini hesapla ve genel toplama ekle
+        var dosyaToplami = result.rows.reduce(function(s,r){ return s + (parseFloat(r[5])||0); }, 0);
+        genelToplamHacim += dosyaToplami;
         
-        // PDF'i ayrıştırıyoruz. parsePDF fonksiyonu bize hem satırları (rows) 
-        // hem de o PDF'e ait özel meta verileri (result.meta) döner.
-        var result = await parsePDF(ab); 
-        
-        if (result.rows && result.rows.length > 0) {
-            
-            // O anki PDF'ten okunan meta veriyi (I sütununa yazılacak bilgi) alıyoruz.
-            // Eğer o PDF'te meta bulunamazsa boş kalmasın diye alternatif atıyoruz.
-            // (Not: Kendi kodundaki meta alanının adından emin olmak için result.meta'yı kontrol et)
-            const oPdfinMetasi = result.meta || ""; 
-
-            // ÇÖZÜM: Sadece bu PDF'ten gelen satırları dönüyoruz ve 
-            // her bir satırın sonuna (I sütununa denk gelecek şekilde) bu PDF'in kendi meta bilgisini gömüyoruz.
-            const guncellenmisSatirlar = result.rows.map(function(row) {
-                let yeniSatir = [...row]; // Mevcut satır verisini kopyala
-                
-                // Eğer parsePDF fonksiyonu satırın sonuna metayı otomatik eklemiyorsa
-                // veya eksik kalıyorsa, I sütununu (8. eleman) bu PDF'in gerçek metasıyla eşitliyoruz/güncelliyoruz.
-                yeniSatir[7] = oPdfinMetasi; // 0'dan başladığı için 7. indeks 8. sütundur (I Sütunu)
-                
-                return yeniSatir;
-            });
-
-            // Güncellenmiş, yani doğru meta verisine sahip satırları ana listeye ekliyoruz
-            tumSatirlar.push(...guncellenmisSatirlar);
-            
-            // Hacim hesaplaması (Orijinal r[5] indeksi değişmez)
-            var dosyaToplami = result.rows.reduce(function(s, r) { 
-                return s + (parseFloat(r[5]) || 0); 
-            }, 0);
-            
-            genelToplamHacim += dosyaToplami;
-            basariliSayisi++;
-        } else {
-            hataliDosyalar.push(file.name + " (Emval satırı bulunamadı)");
-        }
+        basariliSayisi++;
+      } else {
+        hataliDosyalar.push(file.name + " (Emval satırı bulunamadı)");
+      }
     } catch(e) {
-        hataliDosyalar.push(file.name + " (Hata: " + e.message + ")");
-        console.error(file.name + ' için hata oluştu:', e);
+      hataliDosyalar.push(file.name + " (Hata: " + e.message + ")");
+      console.error(file.name + ' için hata oluştu:', e);
     }
-}
+  }
 
-// Eğer hiçbir dosyadan veri çekilemediyse işlemi durdur
-if (tumSatirlar.length === 0) {
+  // Eğer hiçbir dosyadan veri çekilemediyse işlemi durdur
+  if (tumSatirlar.length === 0) {
     log('Yüklenen dosyalarda emval satırı bulunamadı.', 'er');
     setLoading(false);
     return;
-}
+  }
 
-log('✓ ' + basariliSayisi + ' dosya işlendi. Toplam ' + tumSatirlar.length + ' emval satırı birleştirildi.', 'ok');
-log('✓ Genel toplam hacim: ' + genelToplamHacim.toFixed(3) + ' m³', 'ok');
+  log('✓ ' + basariliSayisi + ' dosya işlendi. Toplam ' + tumSatirlar.length + ' emval satırı birleştirildi.', 'ok');
+  log('✓ Genel toplam hacim: ' + genelToplamHacim.toFixed(3) + ' m³', 'ok');
 
-if (hataliDosyalar.length > 0) {
-    alert("Bazı dosyalar okunamadı:\n\n" + hataliDosyalar.join("\n"));
-}
+  // Hatalı dosyalar varsa 'alert' (Uyarı Penceresi) ile ekranda göster
+  if (hataliDosyalar.length > 0) {
+      alert("Bazı dosyalar okunamadı:\n\n" + hataliDosyalar.join("\n"));
+  }
 
   // Kendi sisteminin Excel'i oluşturması için gereken fonksiyonlara tüm veriyi gönderiyoruz
   // Not: 'rows' değişkeni kodunun diğer yerlerinde kullanıldığı için güncelliyoruz
