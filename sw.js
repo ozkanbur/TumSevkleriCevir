@@ -1,5 +1,5 @@
 // Sürüm numarasını her güncellemede artır: eski önbellek silinir, yeni sürüm gelir.
-const CACHE = 'sevkexcel-v8';
+const CACHE = 'sevkexcel-v9';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
