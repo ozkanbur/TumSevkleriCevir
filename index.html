@@ -672,14 +672,18 @@ document.addEventListener('DOMContentLoaded', function () {
                    satir: res.rows.length, adet: res.check.found.adet, hacim: res.check.found.hacim,
                    msgs: res.warnings.slice(0, 4), flags: [] };
         if (m.yaprakNo && seenKey[key]) {
-          items.push({ name: f.name, status: 'dup', msg: 'Tekrar: ' + it.seflik + ' / yaprak ' + it.yaprak + ' zaten yüklü (' + seenKey[key] + '), atlandı' });
-          continue;
+          // Tekrar: atlama, Excel'e ekle ama listede TEKRAR olarak işaretle
+          it.dup = true;
+          it.flags.push('aynı şeflik/yaprak (' + it.seflik + ' / ' + it.yaprak + ') zaten yüklü: ' + seenKey[key] + ' — Excel’e yine de eklendi, toplamlar çift sayılır');
+        } else if (m.yaprakNo) {
+          seenKey[key] = f.name;
         }
-        if (m.yaprakNo) seenKey[key] = f.name;
         it.doc = { meta: m, records: SevkExcel.toRecords(res) };
-        var dupB = 0;
-        it.doc.records.forEach(function (r) { if (seenBarkod[r.barkod]) dupB++; else seenBarkod[r.barkod] = f.name; });
-        if (dupB) it.flags.push(dupB + ' barkod başka bir PDF’te de var');
+        if (!it.dup) {
+          var dupB = 0;
+          it.doc.records.forEach(function (r) { if (seenBarkod[r.barkod]) dupB++; else seenBarkod[r.barkod] = f.name; });
+          if (dupB) it.flags.push(dupB + ' barkod başka bir PDF’te de var');
+        }
         items.push(it);
       } catch (e) {
         items.push({ name: f.name, status: 'error', msg: e.message });
@@ -699,7 +703,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── Özet ──
   function render() {
     var sc = { ok: 0, round: 0, none: 0, bad: 0, error: 0, dup: 0 }, withFlags = 0;
-    items.forEach(function (i) { sc[i.status] = (sc[i.status] || 0) + 1; if (i.flags && i.flags.length) withFlags++; });
+    var dupCnt = 0;
+    items.forEach(function (i) { sc[i.status] = (sc[i.status] || 0) + 1; if (i.dup) dupCnt++; if (i.flags && i.flags.length) withFlags++; });
     var inc = included();
     var has = items.length > 0;
 
@@ -720,7 +725,7 @@ document.addEventListener('DOMContentLoaded', function () {
       v.textContent = '⚠ ' + sc.ok + ' PDF birebir doğrulandı, ' + warn + ' PDF’te uyarı var. Listeyi kontrol edin.';
     } else {
       v.className = 'verify ok on';
-      v.textContent = '✓ ' + sc.ok + ' PDF okundu, hepsi PDF’in kendi toplamıyla birebir eşleşti.' + (sc.dup ? ' (' + sc.dup + ' tekrar atlandı)' : '');
+      v.textContent = '✓ ' + sc.ok + ' PDF okundu, hepsi PDF’in kendi toplamıyla birebir eşleşti.' + '';
     }
 
     var groups = {}, totA = 0, totH = 0, totR = 0;
@@ -747,8 +752,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var probs = items.filter(function (i) { return i.status !== 'ok' || (i.flags && i.flags.length); });
     probs.slice(0, 300).forEach(function (i) {
       var li = document.createElement('li');
-      li.className = i.status === 'bad' || i.status === 'error' ? 'p-bad' : i.status === 'dup' ? 'p-dup' : 'p-warn';
-      var tag = { bad: 'UYUŞMUYOR', error: 'HATA', dup: 'TEKRAR', round: 'YUVARLAMA', none: 'DOĞRULANAMADI', ok: 'UYARI' }[i.status];
+      li.className = i.status === 'bad' || i.status === 'error' ? 'p-bad' : 'p-warn';
+      var tag = i.dup ? 'TEKRAR' : { bad: 'UYUŞMUYOR', error: 'HATA', round: 'YUVARLAMA', none: 'DOĞRULANAMADI', ok: 'UYARI' }[i.status];
       var detail = i.msg || (i.msgs || []).concat(i.flags || []).join(' · ');
       li.appendChild(el('b', null, tag + ' '));
       li.appendChild(document.createTextNode(i.name + (detail ? ' — ' + detail : '')));
