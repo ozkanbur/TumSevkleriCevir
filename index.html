@@ -93,6 +93,7 @@ td.bk{color:var(--accent);} td.hc{color:var(--accent2);text-align:right;}
 .p-bad{background:rgba(239,68,68,.1);color:#fca5a5;} .p-warn{background:rgba(245,158,11,.08);color:#fcd34d;} .p-dup{color:var(--muted);}
 tr.tot td{font-weight:700;border-top:1.5px solid var(--accent2);} td.hc{text-align:right;}
 td:nth-child(n+2){text-align:right;} td:first-child{text-align:left;}
+.ver{margin-top:28px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;}
 .sp{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none;}
 @keyframes spin{to{transform:rotate(360deg);}}
 </style>
@@ -149,6 +150,7 @@ td:nth-child(n+2){text-align:right;} td:first-child{text-align:left;}
   </div>
 
   <button class="btn-dl" id="dlBtn"><span id="dlLabel">⬇ Excel İndir</span></button>
+  <div class="ver" id="ver">sürüm v11 · aynı yaprak no’lu PDF’ler atlanmaz, Excel’e eklenir</div>
 </div>
 
 <script>/* fflate (MIT) */
@@ -674,7 +676,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (m.yaprakNo && seenKey[key]) {
           // Tekrar: atlama, Excel'e ekle ama listede TEKRAR olarak işaretle
           it.dup = true;
-          it.flags.push('aynı şeflik/yaprak (' + it.seflik + ' / ' + it.yaprak + ') zaten yüklü: ' + seenKey[key] + ' — Excel’e yine de eklendi, toplamlar çift sayılır');
+          it.flags.push('aynı şeflik/yaprak (' + it.seflik + ' / ' + it.yaprak + ') başka bir PDF’te de var: ' + seenKey[key] + ' — iki PDF de Excel’e eklendi (aynı PDF’i iki kez yüklediysen toplamlar çift sayılır)');
         } else if (m.yaprakNo) {
           seenKey[key] = f.name;
         }

@@ -1,5 +1,5 @@
-// Sürüm numarasını her güncellemede artır: eski önbellek silinir, yeni sürüm gelir.
-const CACHE = 'sevkexcel-v10';
+// Sürüm numarasını her güncellemede artır: eski önbellek silinir.
+const CACHE = 'sevkexcel-v11';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -8,11 +8,12 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
-// Önce önbellek (çevrimdışı çalışır), arka planda güncelle
+// Önce ağ: internet varken HER ZAMAN en güncel sürüm gelir; internet yoksa önbellekten açılır (çevrimdışı çalışır)
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(hit => {
-    const net = fetch(e.request).then(r => { if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone())); return r; }).catch(() => hit);
-    return hit || net;
-  }));
+  e.respondWith(
+    fetch(e.request, { cache: 'no-cache' })
+      .then(r => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); } return r; })
+      .catch(() => caches.match(e.request, { ignoreSearch: true }))
+  );
 });
